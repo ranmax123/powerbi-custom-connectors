@@ -45,8 +45,6 @@ After you have imported the data, you can create a stunning view of the data lik
 ![](img/HubSpot_DataView.png)
 
 
-
-
 ## Questions/Issues?
 Please open an issue on GitHub. One of our developers would connect with you on the issue.
 

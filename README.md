@@ -42,7 +42,7 @@ Step 7: You can now select objects from your HubSpot account
 
 After you have imported the data, you can create a stunning view of the data like this:
 
-![](img/HubSpot_DataView.png)
+![](img/HubSpot_DataView.PNG)
 
 
 ## Questions/Issues?

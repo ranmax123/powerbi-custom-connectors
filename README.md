@@ -28,6 +28,8 @@ Step 3: Copy this file under C:\Users\\\<Your_User_Name>\\Documents\Microsoft Po
 
 Step 4: Open Power BI Desktop, set "(Not recommended) Allow any..." under Options/Data Extensions 
 
+![](https://user-images.githubusercontent.com/8466040/58529142-3655ab00-81f7-11e9-9e40-add60d253e92.png)
+
 Step 5: Restart Power BI Desktop, navigate to "Get Data" -> "More..." -> "Online Services" and you will find "HubSpot (Beta)), select it.
 
 ![](img/HubSpot_GetData.png)

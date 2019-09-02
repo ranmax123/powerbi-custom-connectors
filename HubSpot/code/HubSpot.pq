@@ -1,5 +1,5 @@
 ﻿// This file contains your Data Connector logic
-[version = "1.0.0"]
+[version = "1.0.1"]
 section HubSpot;
 
 baseUrl = "https://api.hubapi.com";
@@ -9,7 +9,7 @@ dealsSuffixUrl = "/deals/v1/deal/paged";
 
 accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annualrevenue,createdate,hs_lead_status,num_contacted_notes,recent_deal_amount,total_revenue";
 
-dealsProperties = "age,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contated_notes,closed_lost_reason,closed_won_reason";
+dealsProperties = "age,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 
 defaultMaxRows = "250";
 defaultOffset = "0";
@@ -104,10 +104,10 @@ HubSpot.GetAccountsImpl = () =>
         #"Expanded total_revenue" = Table.ExpandRecordColumn(#"Expanded recent_deal_amount", "total_revenue", {"value"}, {"total_revenue"}),
 
         #"Changed Date Type" = Table.AddColumn( #"Expanded total_revenue", "createdate", each FromTimestampToDate([createdate_ts])),
-        #"Changed Type" = Table.TransformColumnTypes( #"Changed Date Type" ,{{"annualrevenue", Currency.Type},
-        {"recent_deal_amount", Currency.Type},{"total_revenue", Currency.Type}}),
+       // #"Changed Type" = Table.TransformColumnTypes( #"Changed Date Type" ,{{"annualrevenue", Currency.Type},
+        //{"recent_deal_amount", Currency.Type},{"total_revenue", Currency.Type}}),
         
-        #"Removed Columns" = Table.RemoveColumns(#"Changed Type" ,{"additionalDomains", "stateChanges", "mergeAudits","portalId"}),
+        #"Removed Columns" = Table.RemoveColumns( #"Changed Date Type" ,{"additionalDomains", "stateChanges", "mergeAudits","portalId"}),
         #"Final Table" = Table.Distinct(#"Removed Columns")
     in
        #"Final Table";

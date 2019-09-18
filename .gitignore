@@ -3,3 +3,6 @@
 ################################################################################
 
 /HubSpot/code/.vs/HubSpotConnector/v15
+/HubSpot/code/bin/Debug/HubSpot.mez
+/HubSpot/code/bin
+/HubSpot/code/obj/Release

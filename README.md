@@ -7,8 +7,8 @@ This is a repository of custom data connectors to Power BI developed by team at 
 * [Zoho (coming soon)](#the-zoho-connector)
 
 
-## Need premium support?
-If you need premium support on these connectors or want us to develop new connectors, feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact]
+## Need further support?
+If you need further support on these connectors (enhancements etc.) or want us to develop new connectors, feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact]
 
 ## The HubSpot Connector
 

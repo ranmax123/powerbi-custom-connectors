@@ -138,6 +138,12 @@
   <data name="HubSpot.GetAccounts.Name" xml:space="preserve">
     <value>Gets HubSpot Accounts</value>
   </data>
+  <data name="HubSpot.GetContacts.LongDescription" xml:space="preserve">
+    <value>Gets HubSpot Contacts</value>
+  </data>
+  <data name="HubSpot.GetContacts.Name" xml:space="preserve">
+    <value>Gets HubSpot Contacts</value>
+  </data>
   <data name="HubSpot.GetDeals.LongDescription" xml:space="preserve">
     <value>Gets HubSpot Deals</value>
   </data>

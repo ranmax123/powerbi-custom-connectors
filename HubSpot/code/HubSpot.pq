@@ -1,5 +1,5 @@
 ﻿// This file contains your Data Connector logic
-[version = "1.0.1"]
+[version = "1.0.2"]
 section HubSpot;
 
 baseUrl = "https://api.hubapi.com";
@@ -7,14 +7,26 @@ baseUrl = "https://api.hubapi.com";
 accountsSuffixUrl = "/companies/v2/companies/paged";
 dealsSuffixUrl = "/deals/v1/deal/paged";
 
+contactsSuffixUrl = "/contacts/v1/lists/all/contacts/all";
+
 accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annualrevenue,createdate,hs_lead_status,num_contacted_notes,recent_deal_amount,total_revenue";
 
 dealsProperties = "age,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 
+contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status";
+
+contactMaxRows = "100";
 defaultMaxRows = "250";
 defaultOffset = "0";
 
 [DataSource.Kind="HubSpot", Publish="HubSpot.Publish"]
+// shared HubSpot.Contents = () =>
+//     let
+//         source = HubSpot.GetContactsImpl()
+//     in
+//         source;
+
+
 shared HubSpot.Contents = Value.ReplaceType(HubSpot.NavImpl, HubSpot.NavImplType);
 
 HubSpot.NavImplType = type function() as table
@@ -28,6 +40,7 @@ HubSpot.NavImpl =  () as table =>
         objects = #table(
             {"Name",       "Key",  "Data", "ItemKind", "ItemName", "IsLeaf"},{
             {"Accounts",   "Accounts",  HubSpot.GetAccounts() , "Table",    "Table",    true},
+            {"Contacts",   "Contacts",  HubSpot.GetContacts() , "Table",    "Table",    true},
             {"Deals",   "Deals",  HubSpot.GetDeals() , "Table",    "Table",    true}
             
         }),
@@ -165,6 +178,91 @@ HubSpot.GetDealsImpl = () =>
     in
          #"Invoked Custom Function2";
 
+//get date one page
+HubSpot.GetContactsDataPerPage = (url, offset) =>
+     let
+        _url = url & "&vidOffset=" & Text.From(offset),
+        response =  Json.Document(Web.Contents(_url, [ ManualCredentials = true ]))
+    in
+        response;
+
+//get data
+HubSpot.GetContactsPagedData = (url) =>
+    let
+        jobsJsonPaginated = List.Generate( () => 
+                        [pageResult = null, nextOffset = 0, counter = 1],
+                        each [counter] <= 1 or [nextOffset] <> 0,
+                        each [pageResult = try HubSpot.GetContactsDataPerPage(url, [nextOffset])                                                                         otherwise null, 
+                                nextOffset = try pageResult[#"vid-offset"] otherwise 0,
+                                counter = [counter] + 1],
+                        each [pageResult]),
+        
+        jobsJsonPaginated2 = List.Skip(jobsJsonPaginated, 1)
+    in 
+        jobsJsonPaginated2;
+
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetContacts = Value.ReplaceType(HubSpot.GetContactsImpl, HubSpot.GetContactsImplType);
+
+HubSpot.GetContactsImplType = type function() as table
+        meta [
+            Documentation.Name = Extension.LoadString("HubSpot.GetContacts.Name"),
+            Documentation.LongDescription = Extension.LoadString("HubSpot.GetContacts.LongDescription")
+        ];       
+HubSpot.GetContactsImpl = () =>
+    let
+        apiKey = Extension.CurrentCredential()[Key],
+
+        queryRecord = [
+        hapikey = apiKey,
+        limit = contactMaxRows
+        ],
+
+        queryString = Uri.BuildQueryString(queryRecord),
+        propertiesQString = "&property=" & Text.Replace(contactsProperties, ",", "&property="),
+
+        url = baseUrl & contactsSuffixUrl & "?" & queryString & propertiesQString,
+
+        Source = HubSpot.GetContactsPagedData (url),
+
+        table = Table.FromList(Source, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+
+        #"Expanded Column1" = Table.ExpandRecordColumn(table, "Column1", {"contacts"}, {"contacts"}),
+        #"Expanded contacts" = Table.ExpandListColumn(#"Expanded Column1", "contacts"),
+
+        #"Expanded contacts2" = Table.ExpandRecordColumn( #"Expanded contacts" , "contacts", {"addedAt", "vid", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "profile-url", "properties", "form-submissions", "identity-profiles", "merge-audits"}, {"addedAt", "vid", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "profile-url", "properties", "form-submissions", "identity-profiles", "merge-audits"}),
+  
+         ContactPropertyAsList = Text.Split(contactsProperties, ","),
+         
+        #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded contacts2", "properties", ContactPropertyAsList),
+
+        #"Expanded website" = Table.ExpandRecordColumn(#"Expanded properties", "website", {"value"}, {"website"}),
+        #"Expanded firstname" = Table.ExpandRecordColumn(#"Expanded website", "firstname", {"value"}, {"firstname"}),
+        #"Expanded city" = Table.ExpandRecordColumn(#"Expanded firstname", "city", {"value"}, {"city"}),
+   
+        #"Expanded state" = Table.ExpandRecordColumn(#"Expanded city", "state", {"value"}, {"state"}),
+        #"Expanded email" = Table.ExpandRecordColumn(#"Expanded state", "email", {"value"}, {"email"}),
+        #"Expanded lastname" = Table.ExpandRecordColumn(#"Expanded email", "lastname", {"value"}, {"lastname"}),
+
+        #"Expanded gender" = Table.ExpandRecordColumn(#"Expanded lastname", "gender", {"value"}, {"gender"}),
+        #"Expanded industry" = Table.ExpandRecordColumn(#"Expanded gender", "industry", {"value"}, {"industry"}),
+        #"Expanded country" = Table.ExpandRecordColumn(#"Expanded industry", "country", {"value"}, {"country"}),
+
+        #"Expanded jobtitle" = Table.ExpandRecordColumn(#"Expanded country", "jobtitle", {"value"}, {"job_title"}),
+        #"Expanded jobfunction" = Table.ExpandRecordColumn(#"Expanded jobtitle", "job_function", {"value"}, {"job_function"}),
+        #"Expanded numdeals" = Table.ExpandRecordColumn(#"Expanded jobfunction", "num_associated_deals", {"value"}, {"num_associated_deals"}),
+        #"Expanded hubspotownerid" = Table.ExpandRecordColumn(#"Expanded numdeals", "hubspot_owner_id", {"value"}, {"hubspot_owner_id"}),
+
+         #"Expanded phone" = Table.ExpandRecordColumn(#"Expanded hubspotownerid", "phone", {"value"}, {"phone"}),
+         
+         #"Expanded linkedin" = Table.ExpandRecordColumn(#"Expanded phone", "hs_linkedinid", {"value"}, {"hs_linkedinid"}),
+           
+         #"Expanded status" = Table.ExpandRecordColumn(#"Expanded linkedin", "hs_lead_status", {"value"}, {"leadstatus"}),
+
+        #"Removed Columns" = Table.RemoveColumns(#"Expanded status",{"addedAt", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "form-submissions", "identity-profiles", "merge-audits"})
+
+    in
+       #"Removed Columns" ;
 
 
 // Data Source Kind description

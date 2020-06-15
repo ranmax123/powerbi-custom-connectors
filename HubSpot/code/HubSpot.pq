@@ -1,5 +1,5 @@
 ﻿// This file contains your Data Connector logic
-[version = "1.0.2"]
+[version = "1.0.3"]
 section HubSpot;
 
 baseUrl = "https://api.hubapi.com";
@@ -13,7 +13,7 @@ accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annual
 
 dealsProperties = "age,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 
-contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status";
+contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,associatedcompanyid";
 
 contactMaxRows = "100";
 defaultMaxRows = "250";
@@ -22,7 +22,7 @@ defaultOffset = "0";
 [DataSource.Kind="HubSpot", Publish="HubSpot.Publish"]
 // shared HubSpot.Contents = () =>
 //     let
-//         source = HubSpot.GetContactsImpl()
+//         source = HubSpot.GetContacts()
 //     in
 //         source;
 
@@ -141,7 +141,8 @@ HubSpot.GetDealsImpl = () =>
 
         queryRecord = [
         hapikey = apiKey,
-        limit = defaultMaxRows
+        limit = defaultMaxRows,
+        includeAssociations="true"
         ],
 
         queryString = Uri.BuildQueryString(queryRecord),
@@ -167,9 +168,17 @@ HubSpot.GetDealsImpl = () =>
         #"Expanded amount_in_home_currency" = Table.ExpandRecordColumn(#"Expanded createdate", "amount_in_home_currency", {"value"}, {"amount_in_home_currency"}),
         #"Expanded age" = Table.ExpandRecordColumn(#"Expanded amount_in_home_currency", "age", {"value"}, {"age"}),
 
-        #"Changed Type" = Table.TransformColumnTypes(#"Expanded age",{{"age", Int64.Type}, {"amount_in_home_currency", Currency.Type}, {"amount", Currency.Type}}),
+       //associations
+         #"Expanded associations" = Table.ExpandRecordColumn(#"Expanded age" , "associations", {"associatedCompanyIds"}, {"associatedCompanyIds"}),
 
-        #"Removed Columns" = Table.RemoveColumns(#"Changed Type",{"portalId", "associations", "imports", "stateChanges"}),
+         #"Associations" = Table.ExpandListColumn( #"Expanded associations", "associatedCompanyIds"),
+
+         #"CompanyNameChange" = Table.RenameColumns(#"Associations", {{"associatedCompanyIds", "companyId"}}),
+
+        #"Changed Type" = Table.TransformColumnTypes( #"CompanyNameChange",
+        {{"age", Int64.Type}, {"amount_in_home_currency", Currency.Type}, {"amount", Currency.Type}}),
+
+        #"Removed Columns" = Table.RemoveColumns(#"Changed Type", {"portalId", "imports", "stateChanges"}),
        
         #"Invoked Custom Function1" = Table.AddColumn( #"Removed Columns", "createdate", each FromTimestampToDate([createdate_ts])),
     
@@ -259,7 +268,10 @@ HubSpot.GetContactsImpl = () =>
            
          #"Expanded status" = Table.ExpandRecordColumn(#"Expanded linkedin", "hs_lead_status", {"value"}, {"leadstatus"}),
 
-        #"Removed Columns" = Table.RemoveColumns(#"Expanded status",{"addedAt", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "form-submissions", "identity-profiles", "merge-audits"})
+         #"Expanded associated Company" = Table.ExpandRecordColumn(#"Expanded status", "associatedcompanyid", {"value"}, {"companyId"}),
+
+
+        #"Removed Columns" = Table.RemoveColumns(#"Expanded associated Company" ,{"addedAt", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "form-submissions", "identity-profiles", "merge-audits"})
 
     in
        #"Removed Columns" ;

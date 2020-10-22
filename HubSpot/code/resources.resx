@@ -150,4 +150,16 @@
   <data name="HubSpot.GetDeals.Name" xml:space="preserve">
     <value>Gets HubSpot Deals</value>
   </data>
+  <data name="HubSpot.GetOwners.LongDescription" xml:space="preserve">
+    <value>Get HubSpot Owners</value>
+  </data>
+  <data name="HubSpot.GetOwners.Name" xml:space="preserve">
+    <value>Get HubSpot Owners</value>
+  </data>
+  <data name="HubSpot.GetTickets.LongDescription" xml:space="preserve">
+    <value>Gets HubSpot Tickets</value>
+  </data>
+  <data name="HubSpot.GetTickets.Name" xml:space="preserve">
+    <value>Gets HubSpot Tickets</value>
+  </data>
 </root>

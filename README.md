@@ -8,13 +8,23 @@ This is a repository of custom data connectors to Power BI developed by team at 
 
 
 ## Need further support?
-If you need further support on these connectors (enhancements etc.) or want us to develop new connectors, feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact]
+If you need further support on these connectors (enhancements etc.) or want us to develop new connectors, feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact] or send me an email (my email id is in the profile section).
 
 ## The HubSpot Connector
 
 The most requested data connector is here! Connect to HubSpot data and visualize your sales pipeline funnel, deal owner performance, win rate and many more metrics.
 
-**I'm excited, how do I get started?**
+### Release
+
+**Oct 2020**
+- Added Tickets object
+- Added Owners object
+
+**Jun 2020**
+- Added associated company in contacts
+- Added associated company in deals
+
+###I'm excited, how do I get started?
 
 Step 1: Get HubSpot key for your account
 
@@ -51,7 +61,7 @@ After you have imported the data, you can create a stunning view of the data lik
 
 Extremely useful connector to fetch Zendesk Support views and tickets information from Zendesk. The connector uses OAuth 2.0 to access your Zendesk's account data.
 
-** Setup **
+### Setup
 
 1. Register an OAuth 2.0 client.
 

@@ -24,7 +24,7 @@ The most requested data connector is here! Connect to HubSpot data and visualize
 - Added associated company in contacts
 - Added associated company in deals
 
-###I'm excited, how do I get started?
+### I'm excited, how do I get started?
 
 Step 1: Get HubSpot key for your account
 

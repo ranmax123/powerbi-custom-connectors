@@ -67,6 +67,9 @@
     <Compile Include="resources.resx">
       <SubType>Code</SubType>
     </Compile>
+    <Content Include="config.json">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Xero.query.pq">
       <SubType>Code</SubType>
     </Content>

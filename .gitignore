@@ -12,3 +12,5 @@
 /.vs
 /Xero/.vs/Xero/v16
 /Xero/obj/Debug
+/Xero/.vs/Xero/config
+/Xero/bin/Debug

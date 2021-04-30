@@ -3,18 +3,24 @@ This is a repository of custom data connectors to Power BI developed by team at 
 
 ## Available custom data connectors
 * [HubSpot](#the-hubspot-connector)
+* Xero (coming soon)
 * [Zendesk Support Tickets](#the-zendesk-support-tickets-connector)
 * [Zoho (coming soon)](#the-zoho-connector)
 
-
 ## Need further support?
-If you need further support on these connectors (enhancements etc.) or want us to develop new connectors, feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact] or send me an email (my email id is in the profile section).
+If you need custom integrations or custom Power BI development solutions, then feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact] or send me an email (my email id is in the profile section).
 
 ## The HubSpot Connector
 
 The most requested data connector is here! Connect to HubSpot data and visualize your sales pipeline funnel, deal owner performance, win rate and many more metrics.
 
 ### Release
+
+**Apr 2021**
+- BREAKING CHANGES: Removed properties, renamed properties
+- Added life cycle stage in Contacts object
+- Added pipeline and priority in Tickets object
+- Added forecast properties in Deals object
 
 **Oct 2020**
 - Added Tickets object

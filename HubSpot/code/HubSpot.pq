@@ -15,10 +15,10 @@ accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annual
 
 dealsProperties = "hs_forecast_amount,hs_manual_forecast_category,hs_forecast_probability,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 
-contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,associatedcompanyid,createdate";
+contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,lifecyclestage,associatedcompanyid,createdate";
 
 ticketProperties = 
-"subject,time_to_close,time_to_first_agent_reply,hs_pipeline_stage,hs_createdate,hubspot_owner_id,hs_ticket_category,closed_date,hs_lastcontacted";
+"hs_ticket_priority,hs_pipeline,subject,time_to_close,time_to_first_agent_reply,hs_pipeline_stage,hs_createdate,hubspot_owner_id,hs_ticket_category,closed_date,hs_lastcontacted";
 
 contactMaxRows = "100";
 defaultMaxRows = "250";
@@ -291,8 +291,10 @@ HubSpot.GetContactsImpl = () =>
         #"Expanded status" = Table.ExpandRecordColumn(#"Expanded linkedin", "hs_lead_status", {"value"}, {"leadstatus"}),
         #"Expanded associated Company" = Table.ExpandRecordColumn(#"Expanded status", "associatedcompanyid", {"value"}, {"companyId"}),
         #"Expanded createdts" = Table.ExpandRecordColumn(#"Expanded associated Company", "createdate", {"value"}, {"created_date_ts"}),
+        #"Expanded lifecyclestage" = Table.ExpandRecordColumn(#"Expanded createdts", "lifecyclestage", {"value"}, {"lifecycle_stage"}),
+       
                      
-        #"Invoked Custom Function1" = Table.AddColumn(#"Expanded createdts" , "created_date", each FromTimestampToDate([created_date_ts])),
+        #"Invoked Custom Function1" = Table.AddColumn(#"Expanded lifecyclestage" , "created_date", each FromTimestampToDate([created_date_ts])),
 
         #"Changed Type" = Table.TransformColumnTypes( #"Invoked Custom Function1",
         {
@@ -336,22 +338,17 @@ HubSpot.GetTicketsImpl = () =>
         #"Expanded subject" = Table.ExpandRecordColumn(#"Expanded properties", "subject", {"value"}, {"subject"}),
         
         #"Expanded time_to_close" = Table.ExpandRecordColumn(#"Expanded subject", "time_to_close", {"value"}, {"time_to_close"}),
-
         #"Expanded time_to_first_agent_reply" = Table.ExpandRecordColumn(#"Expanded time_to_close", "time_to_first_agent_reply", {"value"}, {"time_to_first_agent_reply"}),
-
         #"Expanded hs_pipeline_stage" = Table.ExpandRecordColumn(#"Expanded time_to_first_agent_reply", "hs_pipeline_stage", {"value"}, {"pipeline_stage"}),
-
         #"Expanded hs_createdate" = Table.ExpandRecordColumn(#"Expanded hs_pipeline_stage", "hs_createdate", {"value"}, {"created_date_ts"}),
-
         #"Expanded hubspot_owner_id" = Table.ExpandRecordColumn(#"Expanded hs_createdate", "hubspot_owner_id", {"value"}, {"hubspot_owner_id"}),
-
         #"Expanded hs_ticket_category" = Table.ExpandRecordColumn(#"Expanded hubspot_owner_id", "hs_ticket_category", {"value"}, {"ticket_category"}),
-
         #"Expanded closed_date" = Table.ExpandRecordColumn(#"Expanded hs_ticket_category", "closed_date", {"value"}, {"closed_date_ts"}),
-
         #"Expanded hs_lastcontacted" = Table.ExpandRecordColumn(#"Expanded closed_date", "hs_lastcontacted", {"value"}, {"last_contacted_ts"}),
+        #"Expanded hs_ticket_priority" = Table.ExpandRecordColumn(#"Expanded hs_lastcontacted", "hs_ticket_priority", {"value"}, {"ticket_priority"}),
+        #"Expanded hs_pipeline" = Table.ExpandRecordColumn(#"Expanded hs_ticket_priority", "hs_pipeline", {"value"}, {"pipeline"}),
       
-        #"Removed Columns" = Table.RemoveColumns(#"Expanded hs_lastcontacted" ,{"objectType", "portalId",
+        #"Removed Columns" = Table.RemoveColumns(#"Expanded hs_pipeline" ,{"objectType", "portalId",
          "isDeleted", "hasMore", "offset"}),
 
         #"NameChange" = Table.RenameColumns( #"Removed Columns", {{"objectId", "ticketId"}}),

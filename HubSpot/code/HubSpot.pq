@@ -1,5 +1,5 @@
 ﻿// This file contains your Data Connector logic
-[version = "1.0.4"]
+[version = "2.0.1"]
 section HubSpot;
 
 baseUrl = "https://api.hubapi.com";
@@ -13,9 +13,9 @@ ownersSuffixUrl = "/owners/v2/owners";
 
 accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annualrevenue,createdate,hs_lead_status,num_contacted_notes,recent_deal_amount,total_revenue";
 
-dealsProperties = "age,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
+dealsProperties = "hs_forecast_amount,hs_manual_forecast_category,hs_forecast_probability,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 
-contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,associatedcompanyid";
+contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,associatedcompanyid,createdate";
 
 ticketProperties = 
 "subject,time_to_close,time_to_first_agent_reply,hs_pipeline_stage,hs_createdate,hubspot_owner_id,hs_ticket_category,closed_date,hs_lastcontacted";
@@ -30,7 +30,7 @@ defaultOffset = "0";
 //         source = HubSpot.GetDeals()
 //     in
 //         source;
-
+// 
 
 shared HubSpot.Contents = Value.ReplaceType(HubSpot.NavImpl, HubSpot.NavImplType);
 
@@ -119,16 +119,20 @@ HubSpot.GetAccountsImpl = () =>
         
         #"Expanded hubspot_owner_id" = Table.ExpandRecordColumn(#"Expanded createdate", "hubspot_owner_id", {"value"}, {"hubspot_owner_id"}),
 
-        #"Expanded hs_lead_status" = Table.ExpandRecordColumn(#"Expanded hubspot_owner_id", "hs_lead_status", {"value"}, {"hs_lead_status"}),
+        #"Expanded hs_lead_status" = Table.ExpandRecordColumn(#"Expanded hubspot_owner_id", "hs_lead_status", {"value"}, {"lead_status"}),
         #"Expanded num_contacted_notes" = Table.ExpandRecordColumn(#"Expanded hs_lead_status", "num_contacted_notes", {"value"}, {"num_contacted_notes"}),
         #"Expanded recent_deal_amount" = Table.ExpandRecordColumn(#"Expanded num_contacted_notes", "recent_deal_amount", {"value"}, {"recent_deal_amount"}),
         #"Expanded total_revenue" = Table.ExpandRecordColumn(#"Expanded recent_deal_amount", "total_revenue", {"value"}, {"total_revenue"}),
 
         #"Changed Date Type" = Table.AddColumn( #"Expanded total_revenue", "createdate", each FromTimestampToDate([createdate_ts])),
-       // #"Changed Type" = Table.TransformColumnTypes( #"Changed Date Type" ,{{"annualrevenue", Currency.Type},
-        //{"recent_deal_amount", Currency.Type},{"total_revenue", Currency.Type}}),
-        
-        #"Removed Columns" = Table.RemoveColumns( #"Changed Date Type" ,{"additionalDomains", "stateChanges", "mergeAudits","portalId"}),
+
+        //do not transform revenue, sometimes it gives overflow error
+        #"Changed Type"= Table.TransformColumnTypes(   #"Changed Date Type",
+            {
+                {"createdate", type date}
+                }),
+
+        #"Removed Columns" = Table.RemoveColumns(  #"Changed Type" ,{"additionalDomains", "stateChanges", "mergeAudits","portalId"}),
         #"Final Table" = Table.Distinct(#"Removed Columns")
     in
        #"Final Table";
@@ -177,26 +181,35 @@ HubSpot.GetDealsImpl = () =>
 
         #"Expanded createdate" = Table.ExpandRecordColumn(#"Expanded owner", "createdate", {"value"}, {"createdate_ts"}),
         #"Expanded amount_in_home_currency" = Table.ExpandRecordColumn(#"Expanded createdate", "amount_in_home_currency", {"value"}, {"amount_in_home_currency"}),
-        #"Expanded age" = Table.ExpandRecordColumn(#"Expanded amount_in_home_currency", "age", {"value"}, {"age"}),
+        #"Expanded closed lost reason" = Table.ExpandRecordColumn(  #"Expanded amount_in_home_currency", "closed_lost_reason", {"value"}, {"closed_lost_reason"}),
+        #"Expanded closed won reason" = Table.ExpandRecordColumn( #"Expanded closed lost reason", "closed_won_reason", {"value"}, {"closed_won_reason"}),
 
-       //associations
-         #"Expanded associations" = Table.ExpandRecordColumn(#"Expanded age" , "associations", {"associatedCompanyIds"}, {"associatedCompanyIds"}),
+        //forecast
+        #"Expanded hs_forecast_amount" = Table.ExpandRecordColumn( #"Expanded closed won reason", "hs_forecast_amount", {"value"}, {"forecast_amount"}),
+        #"Expanded hs_manual_forecast_category" = Table.ExpandRecordColumn( #"Expanded hs_forecast_amount", "hs_manual_forecast_category", {"value"}, {"forecast_category"}),
+        #"Expanded hs_forecast_probability" = Table.ExpandRecordColumn( #"Expanded hs_manual_forecast_category", "hs_forecast_probability", {"value"}, {"forecast_probability"}),
+
+         //associations
+         #"Expanded associations" = Table.ExpandRecordColumn( #"Expanded hs_forecast_probability", "associations", {"associatedCompanyIds"}, {"associatedCompanyIds"}),
 
          #"Associations" = Table.ExpandListColumn( #"Expanded associations", "associatedCompanyIds"),
 
          #"CompanyNameChange" = Table.RenameColumns(#"Associations", {{"associatedCompanyIds", "companyId"}}),
 
-        #"Changed Type" = Table.TransformColumnTypes( #"CompanyNameChange",
-        {{"age", Int64.Type}, {"amount_in_home_currency", Currency.Type}, {"amount", Currency.Type}}),
-
-        #"Removed Columns" = Table.RemoveColumns(#"Changed Type", {"portalId", "imports", "stateChanges"}),
+        #"Removed Columns" = Table.RemoveColumns(#"CompanyNameChange", {"portalId", "imports", "stateChanges"}),
        
         #"Invoked Custom Function1" = Table.AddColumn( #"Removed Columns", "createdate", each FromTimestampToDate([createdate_ts])),
-    
-        #"Invoked Custom Function2" = Table.AddColumn(#"Invoked Custom Function1" , "closedate", each FromTimestampToDate([closedate_ts]))
+        #"Invoked Custom Function2" = Table.AddColumn(#"Invoked Custom Function1" , "closedate", each FromTimestampToDate([closedate_ts])),
+
+         #"Changed Type" = Table.TransformColumnTypes( #"Invoked Custom Function2",
+        {{"amount_in_home_currency", Currency.Type}, 
+            {"amount", Currency.Type}, 
+            {"forecast_amount", Currency.Type},
+            {"createdate", type date},
+            {"closedate", type date}})
        
     in
-         #"Invoked Custom Function2";
+           #"Changed Type";
 
 //get date one page
 HubSpot.GetContactsDataPerPage = (url, offset) =>
@@ -273,16 +286,20 @@ HubSpot.GetContactsImpl = () =>
         #"Expanded numdeals" = Table.ExpandRecordColumn(#"Expanded jobfunction", "num_associated_deals", {"value"}, {"num_associated_deals"}),
         #"Expanded hubspotownerid" = Table.ExpandRecordColumn(#"Expanded numdeals", "hubspot_owner_id", {"value"}, {"hubspot_owner_id"}),
 
-         #"Expanded phone" = Table.ExpandRecordColumn(#"Expanded hubspotownerid", "phone", {"value"}, {"phone"}),
-         
-         #"Expanded linkedin" = Table.ExpandRecordColumn(#"Expanded phone", "hs_linkedinid", {"value"}, {"hs_linkedinid"}),
-           
-         #"Expanded status" = Table.ExpandRecordColumn(#"Expanded linkedin", "hs_lead_status", {"value"}, {"leadstatus"}),
+        #"Expanded phone" = Table.ExpandRecordColumn(#"Expanded hubspotownerid", "phone", {"value"}, {"phone"}),
+        #"Expanded linkedin" = Table.ExpandRecordColumn(#"Expanded phone", "hs_linkedinid", {"value"}, {"linkedinid"}),
+        #"Expanded status" = Table.ExpandRecordColumn(#"Expanded linkedin", "hs_lead_status", {"value"}, {"leadstatus"}),
+        #"Expanded associated Company" = Table.ExpandRecordColumn(#"Expanded status", "associatedcompanyid", {"value"}, {"companyId"}),
+        #"Expanded createdts" = Table.ExpandRecordColumn(#"Expanded associated Company", "createdate", {"value"}, {"created_date_ts"}),
+                     
+        #"Invoked Custom Function1" = Table.AddColumn(#"Expanded createdts" , "created_date", each FromTimestampToDate([created_date_ts])),
 
-         #"Expanded associated Company" = Table.ExpandRecordColumn(#"Expanded status", "associatedcompanyid", {"value"}, {"companyId"}),
+        #"Changed Type" = Table.TransformColumnTypes( #"Invoked Custom Function1",
+        {
+            {"created_date", type date}
+            }),
 
-
-        #"Removed Columns" = Table.RemoveColumns(#"Expanded associated Company" ,{"addedAt", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "form-submissions", "identity-profiles", "merge-audits"})
+        #"Removed Columns" = Table.RemoveColumns(  #"Changed Type" ,{"addedAt", "canonical-vid", "merged-vids", "portal-id", "is-contact", "profile-token", "form-submissions", "identity-profiles", "merge-audits"})
 
     in
        #"Removed Columns" ;
@@ -322,31 +339,35 @@ HubSpot.GetTicketsImpl = () =>
 
         #"Expanded time_to_first_agent_reply" = Table.ExpandRecordColumn(#"Expanded time_to_close", "time_to_first_agent_reply", {"value"}, {"time_to_first_agent_reply"}),
 
-        #"Expanded hs_pipeline_stage" = Table.ExpandRecordColumn(#"Expanded time_to_first_agent_reply", "hs_pipeline_stage", {"value"}, {"hs_pipeline_stage"}),
+        #"Expanded hs_pipeline_stage" = Table.ExpandRecordColumn(#"Expanded time_to_first_agent_reply", "hs_pipeline_stage", {"value"}, {"pipeline_stage"}),
 
-        #"Expanded hs_createdate" = Table.ExpandRecordColumn(#"Expanded hs_pipeline_stage", "hs_createdate", {"value"}, {"hs_createdate_ts"}),
+        #"Expanded hs_createdate" = Table.ExpandRecordColumn(#"Expanded hs_pipeline_stage", "hs_createdate", {"value"}, {"created_date_ts"}),
 
         #"Expanded hubspot_owner_id" = Table.ExpandRecordColumn(#"Expanded hs_createdate", "hubspot_owner_id", {"value"}, {"hubspot_owner_id"}),
 
-        #"Expanded hs_ticket_category" = Table.ExpandRecordColumn(#"Expanded hubspot_owner_id", "hs_ticket_category", {"value"}, {"hs_ticket_category"}),
+        #"Expanded hs_ticket_category" = Table.ExpandRecordColumn(#"Expanded hubspot_owner_id", "hs_ticket_category", {"value"}, {"ticket_category"}),
 
         #"Expanded closed_date" = Table.ExpandRecordColumn(#"Expanded hs_ticket_category", "closed_date", {"value"}, {"closed_date_ts"}),
 
-        #"Expanded hs_lastcontacted" = Table.ExpandRecordColumn(#"Expanded closed_date", "hs_lastcontacted", {"value"}, {"hs_lastcontacted_ts"}),
+        #"Expanded hs_lastcontacted" = Table.ExpandRecordColumn(#"Expanded closed_date", "hs_lastcontacted", {"value"}, {"last_contacted_ts"}),
       
         #"Removed Columns" = Table.RemoveColumns(#"Expanded hs_lastcontacted" ,{"objectType", "portalId",
          "isDeleted", "hasMore", "offset"}),
 
         #"NameChange" = Table.RenameColumns( #"Removed Columns", {{"objectId", "ticketId"}}),
 
-        #"Invoked Custom Function1" = Table.AddColumn( #"NameChange", "hs_createdate", each FromTimestampToDate([hs_createdate_ts])),
-    
+        #"Invoked Custom Function1" = Table.AddColumn( #"NameChange", "created_date", each FromTimestampToDate([created_date_ts])),
         #"Invoked Custom Function2" = Table.AddColumn(#"Invoked Custom Function1" , "closed_date", each FromTimestampToDate([closed_date_ts])),
-
-         #"Invoked Custom Function3" = Table.AddColumn(#"Invoked Custom Function2" , "hs_lastcontacted", each FromTimestampToDate([hs_lastcontacted_ts]))
-
+        #"Invoked Custom Function3" = Table.AddColumn(#"Invoked Custom Function2" , "last_contacted", each FromTimestampToDate([last_contacted_ts])),
+         
+        #"Changed Type"= Table.TransformColumnTypes(  #"Invoked Custom Function3",
+        {
+            {"created_date", type date},
+            {"closed_date", type date},
+            {"last_contacted", type date}
+            })
     in
-         #"Invoked Custom Function3";
+       #"Changed Type" ;
 
 [DataSource.Kind="HubSpot"]
 shared HubSpot.GetOwners = Value.ReplaceType(HubSpot.GetOwnersImpl, HubSpot.GetOwnersImplType);
@@ -376,11 +397,15 @@ HubSpot.GetOwnersImpl = () =>
     #"Removed Other Columns" = Table.SelectColumns(#"Renamed Columns",{"portalId", "ownerId", "type", "firstName", "lastName", "email", "createdAt_ts", "updatedAt_ts", "isActive"}),
    
     #"Invoked Custom Function" = Table.AddColumn(#"Removed Other Columns" , "created_at", each FromTimestampToDate([createdAt_ts])),
+    #"Invoked Custom Function2" = Table.AddColumn(#"Invoked Custom Function" , "updated_at", each FromTimestampToDate([updatedAt_ts])),
 
-      #"Invoked Custom Function2" = Table.AddColumn(#"Invoked Custom Function" , "updated_at", each FromTimestampToDate([updatedAt_ts]))
-
+    #"Changed Type"= Table.TransformColumnTypes(  #"Invoked Custom Function2",
+        {
+            {"created_at", type date},
+            {"updated_at", type date}
+            })
     in
-         #"Invoked Custom Function2" ;
+        #"Changed Type" ;
 
 
 // Data Source Kind description

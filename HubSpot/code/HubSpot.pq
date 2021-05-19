@@ -1,5 +1,5 @@
 ﻿// This file contains your Data Connector logic
-[version = "2.0.3"]
+[version = "2.0.4"]
 section HubSpot;
 
 baseUrl = "https://api.hubapi.com";
@@ -10,6 +10,8 @@ dealsSuffixUrl = "/deals/v1/deal/paged";
 contactsSuffixUrl = "/contacts/v1/lists/all/contacts/all";
 ticketsSuffixUrl = "/crm-objects/v1/objects/tickets/paged";
 ownersSuffixUrl = "/owners/v2/owners";
+
+accountsPropertiesSuffixUrl = "/crm/v3/properties/companies";
 
 accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annualrevenue,createdate,hs_lead_status,num_contacted_notes,recent_deal_amount,total_revenue";
 
@@ -24,17 +26,17 @@ contactMaxRows = "100";
 defaultMaxRows = "250";
 defaultOffset = "0";
 
-[DataSource.Kind="HubSpot", Publish="HubSpot.Publish"]
+// [DataSource.Kind="HubSpot", Publish="HubSpot.Publish"]
 // shared HubSpot.Contents = () =>
 //     let
-//         source = HubSpot.GetDeals()
+//         source = HubSpot.GetAccounts()
 //     in
 //         source;
-// 
 
-shared HubSpot.Contents = Value.ReplaceType(HubSpot.NavImpl, HubSpot.NavImplType);
 
-HubSpot.NavImplType = type function() as table
+shared HubSpot.Contents = Value.ReplaceType(HubSpot.NavImpl, HubSpot.Params);
+
+HubSpot.Params = type function() as table
         meta [
             Documentation.Name = Extension.LoadString("HubSpot.Contents.Name"),
             Documentation.LongDescription = Extension.LoadString("HubSpot.Contents.LongDescription")
@@ -48,11 +50,13 @@ HubSpot.NavImpl =  () as table =>
             {"Contacts",   "Contacts",  HubSpot.GetContacts() , "Table",    "Table",    true},
             {"Deals",   "Deals",  HubSpot.GetDeals() , "Table",    "Table",    true},
             {"Tickets",   "Tickets",  HubSpot.GetTickets() , "Table",    "Table",    true},
-             {"Owners",   "Owners",  HubSpot.GetOwners() , "Table",    "Table",    true}
+            {"Owners",   "Owners",  HubSpot.GetOwners() , "Table",    "Table",    true}
         }),
         NavTable = HubSpot.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
     in
         NavTable;
+
+
 
 [DataSource.Kind="HubSpot"]
 shared HubSpot.GetAccounts = Value.ReplaceType(HubSpot.GetAccountsImpl, HubSpot.GetAccountsImplType);
@@ -86,10 +90,55 @@ HubSpot.GetPagedData = (url) =>
     in 
         jobsJsonPaginated2;
 
+//get data without pagination
+HubSpot.GetData = (url) =>
+    let
+        response = Json.Document(Web.Contents(url, [ ManualCredentials = true ]))
+    in
+        response;
+
+Hubspot.GetAccountCustomProperties = () =>
+
+    let
+        apiKey = Extension.CurrentCredential()[Key],
+
+        queryRecord = [
+        hapikey = apiKey,
+        archived = "false"
+        ],
+
+        queryString = Uri.BuildQueryString(queryRecord),
+
+        url = baseUrl & accountsPropertiesSuffixUrl & "?" & queryString,
+
+        Source = HubSpot.GetData (url),
+
+        #"Converted to Table" = Table.FromRecords({Source}),
+        #"Expanded results" = Table.ExpandListColumn(#"Converted to Table", "results"),
+        #"Expanded results1" = Table.ExpandRecordColumn(#"Expanded results", "results", {"updatedAt", "createdAt", "name", "label", "type", "fieldType", "description", "groupName", "options", "createdUserId", "updatedUserId", "referencedObjectType", "displayOrder", "calculated", "externalOptions", "archived", "hasUniqueValue", "hidden", "hubspotDefined", "showCurrencySymbol", "modificationMetadata", "formField"}, {"results.updatedAt", "results.createdAt", "results.name", "results.label", "results.type", "results.fieldType", "results.description", "results.groupName", "results.options", "results.createdUserId", "results.updatedUserId", "results.referencedObjectType", "results.displayOrder", "results.calculated", "results.externalOptions", "results.archived", "results.hasUniqueValue", "results.hidden", "results.hubspotDefined", "results.showCurrencySymbol", "results.modificationMetadata", "results.formField"}),
+        #"Expanded results.modificationMetadata" = Table.ExpandRecordColumn(#"Expanded results1", "results.modificationMetadata", {"archivable", "readOnlyDefinition", "readOnlyOptions", "readOnlyValue"}, {"results.modificationMetadata.archivable", "results.modificationMetadata.readOnlyDefinition", "results.modificationMetadata.readOnlyOptions", "results.modificationMetadata.readOnlyValue"}),
+        #"Changed Type" = Table.TransformColumnTypes(#"Expanded results.modificationMetadata",{{"results.updatedAt", type datetime}, {"results.createdAt", type datetime}, {"results.name", type text}, {"results.label", type text}, {"results.type", type text}, {"results.fieldType", type text}, {"results.description", type text}, {"results.groupName", type text}, {"results.options", type any}, {"results.createdUserId", Int64.Type}, {"results.updatedUserId", Int64.Type}, {"results.referencedObjectType", type any}, {"results.displayOrder", Int64.Type}, {"results.calculated", type logical}, {"results.externalOptions", type logical}, {"results.archived", type logical}, {"results.hasUniqueValue", type logical}, {"results.hidden", type logical}, {"results.hubspotDefined", type logical}, {"results.showCurrencySymbol", type logical}, {"results.modificationMetadata.archivable", type logical}, {"results.modificationMetadata.readOnlyDefinition", type logical}, {"results.modificationMetadata.readOnlyOptions", type logical}, {"results.modificationMetadata.readOnlyValue", type logical}, {"results.formField", type logical}}),
+        CustomProp = Table.SelectRows(#"Changed Type", each ([results.hubspotDefined] = null)),//custom properties
+        #"Removed Other Columns" = Table.SelectColumns(CustomProp,{"results.name"}),
+        #"results name" = #"Removed Other Columns"[results.name]
+    in
+      #"results name";
+
 //get all accounts data and transform
 HubSpot.GetAccountsImpl = () =>
 
     let
+
+        accountsPropFromHubSpot = Hubspot.GetAccountCustomProperties(),
+        definedProp = Text.Split(accountsProperties, ","),
+        finalProp = List.Distinct(List.Combine({accountsPropFromHubSpot, definedProp})),
+       
+       //construct properties string
+        propertiesQString = List.Accumulate(finalProp, "", (state, current) => 
+                                        if state="" 
+                                        then state & "&properties="&current 
+                                        else state & "&" & "properties="&current),
+
         apiKey = Extension.CurrentCredential()[Key],
 
         queryRecord = [
@@ -98,7 +147,6 @@ HubSpot.GetAccountsImpl = () =>
         ],
 
         queryString = Uri.BuildQueryString(queryRecord),
-        propertiesQString = "&properties=" & Text.Replace(accountsProperties, ",", "&properties="),
 
         url = baseUrl & accountsSuffixUrl & "?" & queryString & propertiesQString,
 
@@ -108,23 +156,22 @@ HubSpot.GetAccountsImpl = () =>
         #"Expanded Column1" = Table.ExpandRecordColumn(table, "Column1", {"companies"}, {"companies"}),
         #"Expanded companies" = Table.ExpandListColumn(#"Expanded Column1", "companies"),
         #"Expanded companies1" = Table.ExpandRecordColumn( #"Expanded companies", "companies", {"portalId", "companyId", "isDeleted", "properties", "additionalDomains", "stateChanges", "mergeAudits"}, {"portalId", "companyId", "isDeleted", "properties", "additionalDomains", "stateChanges", "mergeAudits"}),
-        #"Expanded properties1" = Table.ExpandRecordColumn(#"Expanded companies1", "properties", 
-            {"country", "name", "industry", "website", "hubspot_owner_id", "city","annualrevenue","createdate","hs_lead_status","num_contacted_notes","recent_deal_amount","total_revenue"}),
+        #"Expanded properties1" = Table.ExpandRecordColumn(#"Expanded companies1", "properties", finalProp),
+       
         #"Expanded country" = Table.ExpandRecordColumn(#"Expanded properties1", "country", {"value"}, {"country"}),
         #"Expanded name" = Table.ExpandRecordColumn(#"Expanded country", "name", {"value"}, {"name"}),
         #"Expanded industry" = Table.ExpandRecordColumn(#"Expanded name", "industry", {"value"}, {"industry"}),
         #"Expanded website" = Table.ExpandRecordColumn( #"Expanded industry", "website", {"value"}, {"website"}),
         #"Expanded annualrevenue" = Table.ExpandRecordColumn(#"Expanded website", "annualrevenue", {"value"}, {"annualrevenue"}),
         #"Expanded createdate" = Table.ExpandRecordColumn(#"Expanded annualrevenue", "createdate", {"value"}, {"createdate_ts"}),
-        
         #"Expanded hubspot_owner_id" = Table.ExpandRecordColumn(#"Expanded createdate", "hubspot_owner_id", {"value"}, {"hubspot_owner_id"}),
-
         #"Expanded hs_lead_status" = Table.ExpandRecordColumn(#"Expanded hubspot_owner_id", "hs_lead_status", {"value"}, {"lead_status"}),
         #"Expanded num_contacted_notes" = Table.ExpandRecordColumn(#"Expanded hs_lead_status", "num_contacted_notes", {"value"}, {"num_contacted_notes"}),
         #"Expanded recent_deal_amount" = Table.ExpandRecordColumn(#"Expanded num_contacted_notes", "recent_deal_amount", {"value"}, {"recent_deal_amount"}),
         #"Expanded total_revenue" = Table.ExpandRecordColumn(#"Expanded recent_deal_amount", "total_revenue", {"value"}, {"total_revenue"}),
+        #"Expanded city" = Table.ExpandRecordColumn(#"Expanded total_revenue", "city", {"value"}, {"city"}),
 
-        #"Changed Date Type" = Table.AddColumn( #"Expanded total_revenue", "createdate", each FromTimestampToDate([createdate_ts])),
+        #"Changed Date Type" = Table.AddColumn( #"Expanded city", "createdate", each FromTimestampToDate([createdate_ts])),
 
         //do not transform revenue, sometimes it gives overflow error
         #"Changed Type"= Table.TransformColumnTypes(   #"Changed Date Type",

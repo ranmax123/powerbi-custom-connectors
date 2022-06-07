@@ -1,5 +1,5 @@
 ﻿// This file contains your Data Connector logic
-[version = "2.0.4"]
+[version = "2.0.5"]
 section HubSpot;
 
 baseUrl = "https://api.hubapi.com";
@@ -17,7 +17,7 @@ accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annual
 
 dealsProperties = "hs_forecast_amount,hs_manual_forecast_category,hs_forecast_probability,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 
-contactsProperties = "gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,hs_analytics_source,lifecyclestage,associatedcompanyid,createdate";
+contactsProperties = "lead_source,gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,hs_analytics_source,lifecyclestage,associatedcompanyid,createdate";
 
 ticketProperties = 
 "hs_ticket_priority,hs_pipeline,subject,time_to_close,time_to_first_agent_reply,hs_pipeline_stage,createdate,source_type,hubspot_owner_id,hs_ticket_category,closed_date,hs_lastcontacted";
@@ -29,7 +29,7 @@ defaultOffset = "0";
 // [DataSource.Kind="HubSpot", Publish="HubSpot.Publish"]
 // shared HubSpot.Contents = () =>
 //     let
-//         source = HubSpot.GetAccounts()
+//         source = HubSpot.GetContacts()
 //     in
 //         source;
 
@@ -340,8 +340,9 @@ HubSpot.GetContactsImpl = () =>
         #"Expanded createdts" = Table.ExpandRecordColumn(#"Expanded associated Company", "createdate", {"value"}, {"created_date_ts"}),
         #"Expanded lifecyclestage" = Table.ExpandRecordColumn(#"Expanded createdts", "lifecyclestage", {"value"}, {"lifecycle_stage"}),
         #"Expanded hs_analytics_source" = Table.ExpandRecordColumn(#"Expanded lifecyclestage", "hs_analytics_source", {"value"}, {"source"}),
+        #"Expanded lead_source" = Table.ExpandRecordColumn(#"Expanded hs_analytics_source", "lead_source", {"value"}, {"lead_source"}),
                      
-        #"Invoked Custom Function1" = Table.AddColumn(#"Expanded hs_analytics_source" , "created_date", each FromTimestampToDate([created_date_ts])),
+        #"Invoked Custom Function1" = Table.AddColumn(#"Expanded lead_source" , "created_date", each FromTimestampToDate([created_date_ts])),
 
         #"Changed Type" = Table.TransformColumnTypes( #"Invoked Custom Function1",
         {

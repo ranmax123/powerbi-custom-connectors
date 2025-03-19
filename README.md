@@ -14,7 +14,7 @@ The most requested data connector is here! Connect to HubSpot data and visualize
 
 Note: When creating a private app on HubSpot ensure following scopes are added:
 
-![HubSpot Scope](img/HubSpot_Scope.png)
+![HubSpot Scope](img/HubSpot_Scope.PNG)
 
 ### Release
 

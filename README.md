@@ -3,32 +3,32 @@ This is a repository of custom data connectors to Power BI developed by team at 
 
 ## Available custom data connectors
 * [HubSpot](#the-hubspot-connector)
-* Xero (coming soon)
 * [Zendesk Support Tickets](#the-zendesk-support-tickets-connector)
-* [Zoho (coming soon)](#the-zoho-connector)
 
 ## Need further support?
-If you need custom integrations or custom Power BI development solutions, then feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact] or send me an email (my email id is in the profile section).
+If you need custom integrations or custom Fabric or Power BI development solutions, then feel free to reach us at [bigintsolutions.com/contact][bigintsolutions-contact] or send me an email (my email id is in the profile section).
 
 ## The HubSpot Connector
 
 The most requested data connector is here! Connect to HubSpot data and visualize your sales pipeline funnel, deal owner performance, win rate and many more metrics.
 
+Note: When creating a private app on HubSpot ensure following scopes are added:
+
+![HubSpot Scope](img/HubSpot_Scope.png)
+
 ### Release
 
-**Apr 2021**
-- BREAKING CHANGES: Removed properties, renamed properties
-- Added life cycle stage in Contacts object
-- Added pipeline and priority in Tickets object
-- Added forecast properties in Deals object
+**Mar 2025**
+- Support added for Hubspot private apps
+- The current version on GitHub supports 100 rows for each object
+- Objects available
+    - Accounts
+    - Contacts
+    - Deals
+    - Tickets
+    - Owners
+- Please contact me if you need support for more than 100 rows or support for additional objects
 
-**Oct 2020**
-- Added Tickets object
-- Added Owners object
-
-**Jun 2020**
-- Added associated company in contacts
-- Added associated company in deals
 
 ### I'm excited, how do I get started?
 
@@ -120,9 +120,9 @@ And visualize it something like this:
 ![](img/ZendeskSupportReport.png)
 
 ## Questions/Issues?
-Please open an issue on GitHub. One of our developers would connect with you on the issue.
+Please open an issue on GitHub. I will connect with you on the issue.
 
-[hubspot-key]:https://knowledge.hubspot.com/articles/kcs_article/integrations/how-do-i-get-my-hubspot-api-key
+[hubspot-key]: https://developers.hubspot.com/docs/guides/apps/private-apps/overview#make-api-calls-with-your-app-s-access-token
 [zendesk-app]: https://support.zendesk.com/hc/en-us/articles/203663836#topic_s21_lfs_qk
 
 [bigintsolutions]: https://www.bigintsolutions.com

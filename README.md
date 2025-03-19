@@ -32,9 +32,9 @@ Note: When creating a private app on HubSpot ensure following scopes are added:
 
 ### I'm excited, how do I get started?
 
-Step 1: Get HubSpot key for your account
+Step 1: Get HubSpot Private App token for your account
 
-[Get HubSpot Key here][hubspot-key]
+[Get HubSpot Token here][hubspot-key]
 
 Step 2: Download HubSpot.mez file from HubSpot\build folder in this repository
 
